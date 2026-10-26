@@ -17,6 +17,8 @@
   --term-bg: rgba(255, 255, 255, 0.1);
   --tooltip-bg: #1c1c1e;
   --tooltip-border: #333;
+  --progress-bg: rgba(255,255,255,0.1);
+  --progress-fill: #86868b;
 }
 [data-theme="light"] {
   --bg: #f4f4f4;
@@ -27,6 +29,8 @@
   --term-bg: rgba(0, 0, 0, 0.05);
   --tooltip-bg: #ffffff;
   --tooltip-border: #e5e5ea;
+  --progress-bg: rgba(0,0,0,0.1);
+  --progress-fill: #1d1d1f;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
@@ -38,7 +42,7 @@ html, body {
   transition: background 0.5s ease, color 0.5s ease;
 }
 
-/* ЭФФЕКТ СТАРОЙ ПЛЕНКИ (СТАТИЧНЫЙ, БЕЗ ДЕРГАНИЯ) */
+/* ЭФФЕКТ СТАРОЙ ПЛЕНКИ */
 .film-grain {
   position: fixed; inset: 0; z-index: 0; pointer-events: none;
   background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%" height="100%" filter="url(%23noise)"/></svg>');
@@ -57,13 +61,18 @@ html, body {
 .slide {
   position: absolute; inset: 0;
   display: flex; flex-direction: column; justify-content: center;
-  padding: calc(8vh + env(safe-area-inset-top)) calc(6vw + env(safe-area-inset-right)) calc(8vh + env(safe-area-inset-bottom)) calc(6vw + env(safe-area-inset-left));
+  padding: calc(8vh + env(safe-area-inset-top)) calc(6vw + env(safe-area-inset-right)) calc(10vh + env(safe-area-inset-bottom)) calc(6vw + env(safe-area-inset-left));
   opacity: 0; visibility: hidden;
-  /* ТОЛЬКО OPACITY, ЧТОБЫ НЕ ДЕРГАЛОСЬ */
-  transition: opacity 0.4s ease, visibility 0.4s;
+  transform: translateY(15px);
+  transition: opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              transform 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+              visibility 0.6s;
   overflow: hidden;
 }
-.slide.active { opacity: 1; visibility: visible; z-index: 10; }
+.slide.active {
+  opacity: 1; visibility: visible; transform: translateY(0);
+  z-index: 10;
+}
 
 /* ТИПОГРАФИКА */
 .kicker {
@@ -96,35 +105,32 @@ html, body {
 .section-title { font-size: clamp(1.8rem, 6vw, 3rem); font-weight: 700; line-height: 1.1; margin-bottom: 1rem; }
 .section-sub { font-size: clamp(0.9rem, 3vw, 1.1rem); color: var(--text-muted); line-height: 1.4; }
 
-/* НАСТРОЙКИ */
-.settings-btn {
+/* КНОПКА СМЕНЫ ТЕМЫ (ВМЕСТО ШЕСТЕРЕНКИ) */
+.theme-btn {
   position: fixed; top: calc(20px + env(safe-area-inset-top)); right: calc(20px + env(safe-area-inset-right));
   width: 44px; height: 44px; border-radius: 50%; background: transparent; border: none; color: var(--text-muted);
   display: flex; align-items: center; justify-content: center; z-index: 100; cursor: pointer;
-  transition: color 0.3s, transform 0.4s;
+  transition: color 0.3s, transform 0.3s;
 }
-.settings-btn:hover { color: var(--text); transform: rotate(90deg); }
-.settings-btn svg { width: 20px; height: 20px; stroke: currentColor; stroke-width: 1.5; fill: none; }
-
-.settings-menu {
-  position: fixed; top: calc(70px + env(safe-area-inset-top)); right: calc(20px + env(safe-area-inset-right));
-  background: var(--bg); border: 1px solid var(--border); border-radius: 12px; padding: 6px; z-index: 100;
-  opacity: 0; visibility: hidden; transform: translateY(-10px); transition: all 0.3s ease;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-}
-.settings-menu.open { opacity: 1; visibility: visible; transform: translateY(0); }
-.theme-toggle {
-  display: flex; align-items: center; gap: 10px; padding: 10px 14px; border: none; background: transparent;
-  color: var(--text); font-size: 0.85rem; font-family: inherit; cursor: pointer; border-radius: 8px; width: 100%;
-}
-.theme-toggle:hover { background: var(--term-bg); }
-.theme-toggle svg { width: 16px; height: 16px; stroke: currentColor; stroke-width: 1.5; fill: none; }
+.theme-btn:hover { color: var(--text); transform: scale(1.1); }
+.theme-btn svg { width: 22px; height: 22px; stroke: currentColor; stroke-width: 1.5; fill: none; stroke-linecap: round; stroke-linejoin: round; }
 
 /* ВОДЯНОЙ ЗНАК */
 .watermark {
   position: fixed; bottom: calc(15px + env(safe-area-inset-bottom)); left: calc(20px + env(safe-area-inset-left));
   font-size: 0.65rem; letter-spacing: 0.3em; color: var(--text-muted); opacity: 0.3;
   text-transform: uppercase; z-index: 50; pointer-events: none; font-weight: 600;
+}
+
+/* ПОЛОСА ПРОГРЕССА */
+.progress-container {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  height: 2px; background: var(--progress-bg);
+  z-index: 100; pointer-events: none;
+}
+.progress-bar {
+  height: 100%; background: var(--progress-fill); width: 0%;
+  transition: width 0.3s ease;
 }
 
 /* TOOLTIP */
@@ -152,18 +158,17 @@ html, body {
 <div class="film-grain"></div>
 <div class="vignette"></div>
 
-<button class="settings-btn" id="settingsBtn" aria-label="Настройки">
-  <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+<!-- Кнопка темы (Солнце/Луна) -->
+<button class="theme-btn" id="themeBtn" aria-label="Сменить тему">
+  <svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
 </button>
-<div class="settings-menu" id="settingsMenu">
-  <button class="theme-toggle" id="themeToggle">
-    <svg id="themeIcon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
-    <span id="themeText">Тёмная тема</span>
-  </button>
-</div>
 
 <div class="watermark">ascet</div>
 <div class="tooltip" id="tooltip"></div>
+
+<!-- Полоса прогресса -->
+<div class="progress-container"><div class="progress-bar" id="progressBar"></div></div>
+
 <main id="deck"></main>
 
 <script>
@@ -200,7 +205,7 @@ const GLOSSARY = {
   "коллаген": "Белок, придающий тканям прочность и эластичность."
 };
 
-// БАЗА ЗНАНИЙ: 50 РАЗДЕЛОВ ПО 10 ФАКТОВ
+// БАЗА ЗНАНИЙ (50 ТЕМ)
 const knowledgeBase = [
   { title: "Кость как орган", facts: ["Кость — это живой орган, состоящий из костной ткани, надкостницы, костного мозга и сосудов.", "В компактном веществе костные пластинки образуют остеоны, обеспечивающие прочность.", "Губчатое вещество состоит из трабекул, расположенных по линиям максимальной нагрузки.", "Надкостница содержит остеобласты, за счёт которых происходит рост и регенерация кости.", "Красный костный мозг является органом кроветворения, а жёлтый — депо жира.", "Кости активно участвуют в минеральном обмене, регулируя уровень кальция и фосфора в крови.", "Структура кости перестраивается в течение всей жизни в ответ на механические нагрузки.", "Кости обладают высокой прочностью на сжатие и растяжение.", "В костях содержится около 99% всего кальция организма.", "Костная ткань состоит из остеоцитов, остеобластов и остеокластов."], note: "Структура кости перестраивается в течение всей жизни в ответ на механические нагрузки." },
   { title: "Классификация костей", facts: ["Длинные трубчатые кости имеют тело (диафиз) и два конца (эпифизы), между которыми расположена метафизарная пластинка роста.", "Короткие кости (позвонки, кости запястья) имеют сложную форму и обеспечивают комбинированные движения.", "Плоские кости (лопатка, кости черепа) выполняют преимущественно защитную функцию и служат местом прикрепления мышц.", "Смешанные кости (ключица, височная кость) сочетают в себе признаки нескольких типов.", "Воздухоносные кости содержат полости, выстланные слизистой оболочкой, которые сообщаются с носовой полостью.", "Форма и функция кости неразрывно связаны: каждая кость приспособлена к тем нагрузкам, которые она испытывает.", "Сесамовидные кости (надколенник) расположены в толще сухожилий и увеличивают плечо силы.", "Кости делятся на осевые (череп, позвоночник, грудина) и добавочные (конечности).", "Размер и форма костей зависят от генетических факторов и образа жизни.", "Перестройка костей происходит под влиянием гормонов (паратгормон, кальцитонин)."], note: "Форма кости определяется её функцией и генетически запрограммирована." },
@@ -248,7 +253,7 @@ const knowledgeBase = [
   { title: "Терморегуляция", facts: ["Терморегуляция — способность организма поддерживать постоянную температуру тела (около 37°C).", "Химическая терморегуляция осуществляется за счёт обмена веществ (образование тепла в мышцах и печени).", "Физическая терморегуляция включает теплоотдачу через кожу (излучение, испарение пота, теплопроведение).", "При повышении температуры окружающей среды сосуды кожи расширяются, увеличивая теплоотдачу.", "При понижении температуры сосуды сужаются, а мышцы сокращаются (дрожь), вырабатывая тепло.", "Центр терморегуляции находится в гипоталамусе.", "Лихорадка — это защитно-приспособительная реакция, при которой повышается температура тела для борьбы с инфекцией.", "Потоотделение способствует охлаждению организма при перегреве.", "Дрожь — это непроизвольные сокращения мышц, вырабатывающие тепло.", "Гипотермия — состояние, при котором температура тела опускается ниже 35°C."], note: "Лихорадка — это защитно-приспособительная реакция, при которой повышается температура тела для борьбы с инфекцией." }
 ];
 
-// ГЕНЕРАЦИЯ 500 СЛАЙДОВ ИЗ БАЗЫ ЗНАНИЙ
+// ГЕНЕРАЦИЯ 500 СЛАЙДОВ
 const D = [];
 let id = 1;
 
@@ -279,6 +284,7 @@ while (D.length < 500) {
 // ==========================================
 const deck = document.getElementById('deck');
 const total = D.length;
+const progressBar = document.getElementById('progressBar');
 
 function highlightTerms(text) {
   let result = text;
@@ -331,6 +337,9 @@ function show(n) {
 
   cur = n;
   newEl.classList.add('active');
+  
+  // Обновляем полосу прогресса
+  progressBar.style.width = ((cur + 1) / total * 100) + '%';
 }
 
 function nextSlide() { show(cur + 1); }
@@ -338,7 +347,7 @@ function prevSlide() { show(cur - 1); }
 
 // ОБРАБОТКА КЛИКОВ
 document.addEventListener('click', (e) => {
-  if (e.target.closest('#settingsBtn') || e.target.closest('#settingsMenu')) return;
+  if (e.target.closest('#themeBtn')) return;
   if (e.target.classList.contains('term')) {
     e.stopPropagation();
     const def = e.target.getAttribute('data-def');
@@ -404,42 +413,28 @@ function showTooltip(target, text) {
   setTimeout(() => { tooltip.classList.remove('show'); }, 4000);
 }
 
-// Настройки и темы
-const settingsBtn = document.getElementById('settingsBtn');
-const settingsMenu = document.getElementById('settingsMenu');
-const themeToggle = document.getElementById('themeToggle');
+// СМЕНА ТЕМЫ (КЛИК ПО ИКОНКЕ)
+const themeBtn = document.getElementById('themeBtn');
 const themeIcon = document.getElementById('themeIcon');
-const themeText = document.getElementById('themeText');
-
-settingsBtn.addEventListener('click', (e) => {
-  e.stopPropagation();
-  settingsMenu.classList.toggle('open');
-});
-
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('#settingsBtn') && !e.target.closest('#settingsMenu')) {
-    settingsMenu.classList.remove('open');
-  }
-});
 
 const SUN_PATH = `<path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8z"></path>`;
 const MOON_PATH = `<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>`;
 
-themeToggle.addEventListener('click', () => {
+themeBtn.addEventListener('click', (e) => {
+  e.stopPropagation(); // Чтобы не переключился слайд
   const isLight = document.documentElement.getAttribute('data-theme') === 'light';
   if (isLight) {
     document.documentElement.removeAttribute('data-theme');
     themeIcon.innerHTML = MOON_PATH;
-    themeText.textContent = 'Тёмная тема';
     document.querySelector('meta[name="theme-color"]').setAttribute('content', '#050505');
   } else {
     document.documentElement.setAttribute('data-theme', 'light');
     themeIcon.innerHTML = SUN_PATH;
-    themeText.textContent = 'Светлая тема';
     document.querySelector('meta[name="theme-color"]').setAttribute('content', '#f4f4f4');
   }
 });
 
+// Старт
 show(0);
 </script>
 </body>
